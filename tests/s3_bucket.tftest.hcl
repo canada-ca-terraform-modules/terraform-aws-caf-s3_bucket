@@ -26,6 +26,36 @@ run "naming_convention" {
     condition     = can(regex("^[0-9a-z-]+$", aws_s3_bucket.this.bucket))
     error_message = "Bucket name must be lowercase alphanumeric and hyphens only"
   }
+
+  assert {
+    condition     = can(regex("^[0-9a-z].*[0-9a-z]$", aws_s3_bucket.this.bucket)) || length(aws_s3_bucket.this.bucket) < 2
+    error_message = "Bucket name must begin and end with a letter or number"
+  }
+}
+
+# ---------------------------------------------------------------------------
+# naming_convention_truncation_edge_case
+# A long userDefinedString can push the 63-char truncation to land mid-hyphen,
+# and an env value that itself starts with "-" can leak a leading hyphen -
+# both must be trimmed so the assembled name still begins/ends alphanumeric.
+# ---------------------------------------------------------------------------
+run "naming_convention_truncation_edge_case" {
+  command = plan
+
+  variables {
+    env               = "-prod"
+    userDefinedString = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+
+  assert {
+    condition     = length(aws_s3_bucket.this.bucket) <= 63
+    error_message = "Bucket name must not exceed 63 characters"
+  }
+
+  assert {
+    condition     = can(regex("^[0-9a-z].*[0-9a-z]$", aws_s3_bucket.this.bucket))
+    error_message = "Bucket name must begin and end with a letter or number, even after truncation"
+  }
 }
 
 # ---------------------------------------------------------------------------
