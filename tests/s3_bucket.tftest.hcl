@@ -1,12 +1,19 @@
-# tests/s3_bucket.tftest.hcl
 mock_provider "aws" {}
 
+# ---------------------------------------------------------------------------
+# Shared variables reused across all runs
+# ---------------------------------------------------------------------------
 variables {
   env               = "Dev"
-  userDefinedString = "test"
+  userDefinedString = "myapp"
   tags              = { environment = "test" }
+  bucket            = {}
 }
 
+# ---------------------------------------------------------------------------
+# naming_convention
+# Verifies the bucket name is generated from env + userDefinedString + sha1 unique suffix
+# ---------------------------------------------------------------------------
 run "naming_convention" {
   command = plan
 
@@ -21,6 +28,10 @@ run "naming_convention" {
   }
 }
 
+# ---------------------------------------------------------------------------
+# default_values
+# Plan succeeds with an empty bucket object (all optional fields defaulted)
+# ---------------------------------------------------------------------------
 run "default_values" {
   command = plan
 
@@ -38,14 +49,34 @@ run "default_values" {
     condition     = aws_s3_bucket_public_access_block.this.block_public_acls == true
     error_message = "Public ACLs must be blocked by default"
   }
+
+  assert {
+    condition     = aws_s3_bucket.this.force_destroy == false
+    error_message = "force_destroy must default to false"
+  }
 }
 
+# ---------------------------------------------------------------------------
+# tags_are_merged_with_module_tag
+# Caller-supplied tags, bucket.tags, and the module tag are all merged
+# ---------------------------------------------------------------------------
 run "tags_are_merged_with_module_tag" {
   command = plan
+
+  variables {
+    bucket = {
+      tags = { owner = "team-x" }
+    }
+  }
 
   assert {
     condition     = aws_s3_bucket.this.tags["environment"] == "test"
     error_message = "Caller-supplied tags must be preserved"
+  }
+
+  assert {
+    condition     = aws_s3_bucket.this.tags["owner"] == "team-x"
+    error_message = "bucket.tags must be merged in"
   }
 
   assert {
@@ -54,14 +85,58 @@ run "tags_are_merged_with_module_tag" {
   }
 }
 
+# ---------------------------------------------------------------------------
+# versioning_can_be_disabled
+# ---------------------------------------------------------------------------
 run "versioning_can_be_disabled" {
   command = plan
+
   variables {
-    versioning_enabled = false
+    bucket = {
+      versioning_enabled = false
+    }
   }
 
   assert {
     condition     = aws_s3_bucket_versioning.this.versioning_configuration[0].status == "Suspended"
     error_message = "Versioning must be suspended when disabled"
+  }
+}
+
+# ---------------------------------------------------------------------------
+# sse_kms
+# kms_master_key_id is only set when sse_algorithm = "aws:kms"
+# ---------------------------------------------------------------------------
+run "sse_kms" {
+  command = plan
+
+  variables {
+    bucket = {
+      sse_algorithm = "aws:kms"
+      kms_key_id    = "arn:aws:kms:ca-central-1:000000000000:key/test-key"
+    }
+  }
+
+  assert {
+    condition     = one(aws_s3_bucket_server_side_encryption_configuration.this.rule).apply_server_side_encryption_by_default[0].kms_master_key_id == "arn:aws:kms:ca-central-1:000000000000:key/test-key"
+    error_message = "kms_master_key_id must be set when sse_algorithm is aws:kms"
+  }
+}
+
+# ---------------------------------------------------------------------------
+# force_destroy_enabled
+# ---------------------------------------------------------------------------
+run "force_destroy_enabled" {
+  command = plan
+
+  variables {
+    bucket = {
+      force_destroy = true
+    }
+  }
+
+  assert {
+    condition     = aws_s3_bucket.this.force_destroy == true
+    error_message = "force_destroy must be true when set"
   }
 }

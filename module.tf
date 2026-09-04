@@ -1,29 +1,15 @@
-locals {
-  module_tag = {
-    "module" = basename(abspath(path.module))
-  }
-  tags = merge(var.tags, local.module_tag)
-
-  # ponytail: uniqueness derived from env+userDefinedString only (no account/region
-  # salt). S3 bucket names are globally unique across all AWS accounts; if this
-  # collides, add data.aws_caller_identity/region into the hash input.
-  bucket-regex   = "/[^0-9a-z-]/" # S3 bucket names allow only lowercase, digits and hyphens
-  unique_8       = substr(sha1("${var.env}-${var.userDefinedString}"), 0, 8)
-  env-compliant  = replace(lower(var.env), local.bucket-regex, "")
-  name-compliant = replace(lower(var.userDefinedString), local.bucket-regex, "")
-  bucket-name    = substr("${local.env-compliant}-${local.name-compliant}-${local.unique_8}", 0, 63)
-}
-
 resource "aws_s3_bucket" "this" {
   bucket        = local.bucket-name
-  force_destroy = var.force_destroy
-  tags          = local.tags
+  force_destroy = try(var.bucket.force_destroy, false)
+
+  # Tags - Merging tags provided by ESLZ with tags provided by the user
+  tags = merge(var.tags, try(var.bucket.tags, {}), local.module_tag)
 }
 
 resource "aws_s3_bucket_versioning" "this" {
   bucket = aws_s3_bucket.this.id
   versioning_configuration {
-    status = var.versioning_enabled ? "Enabled" : "Suspended"
+    status = try(var.bucket.versioning_enabled, true) ? "Enabled" : "Suspended"
   }
 }
 
@@ -31,17 +17,17 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
   bucket = aws_s3_bucket.this.id
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm     = var.sse_algorithm
-      kms_master_key_id = var.sse_algorithm == "aws:kms" ? var.kms_key_id : null
+      sse_algorithm     = try(var.bucket.sse_algorithm, "AES256")
+      kms_master_key_id = try(var.bucket.sse_algorithm, "AES256") == "aws:kms" ? try(var.bucket.kms_key_id, null) : null
     }
-    bucket_key_enabled = var.bucket_key_enabled
+    bucket_key_enabled = try(var.bucket.bucket_key_enabled, true)
   }
 }
 
 resource "aws_s3_bucket_public_access_block" "this" {
   bucket                  = aws_s3_bucket.this.id
-  block_public_acls       = var.block_public_acls
-  block_public_policy     = var.block_public_policy
-  ignore_public_acls      = var.ignore_public_acls
-  restrict_public_buckets = var.restrict_public_buckets
+  block_public_acls       = try(var.bucket.block_public_acls, true)
+  block_public_policy     = try(var.bucket.block_public_policy, true)
+  ignore_public_acls      = try(var.bucket.ignore_public_acls, true)
+  restrict_public_buckets = try(var.bucket.restrict_public_buckets, true)
 }
