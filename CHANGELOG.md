@@ -5,6 +5,19 @@ All notable changes to this module are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This file must be updated as part of every change to this module.
 
+## [2.0.0] - 2026-11-02
+
+Also releases the changes of 1.1.0 below, which were never tagged.
+
+### Changed
+
+- **Breaking:** the `object` output lists the attributes of the bucket that the provider has not deprecated (`id`, `arn`, `bucket`,
+  `bucket_domain_name`, `bucket_regional_domain_name`, `bucket_region`, `hosted_zone_id`, `region`, `object_lock_enabled`,
+  `force_destroy`, `tags_all`) instead of returning the whole `aws_s3_bucket` resource. Validating a composition that uses the module no
+  longer warns about `acceleration_status`, `acl`, `policy`, `request_payer`, `website_domain` and `website_endpoint`. A consumer that reads
+  one of those six from `object` reads the matching `aws_s3_bucket_*` configuration instead, through its own resource. The outputs
+  `id`, `arn`, `bucket` and `bucket_domain_name` are unchanged.
+
 ## [1.1.0] - 2026-09-04
 
 ### Added

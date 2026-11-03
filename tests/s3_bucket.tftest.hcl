@@ -535,3 +535,22 @@ run "object_lock" {
     error_message = "object_lock default_retention must be applied"
   }
 }
+
+# ---------------------------------------------------------------------------
+# object_output_omits_the_deprecated_attributes
+# The object output lists the attributes consumers need: returning the whole resource made every consumer warn about the six
+# deprecated attributes of aws_s3_bucket (acceleration_status, acl, policy, request_payer, website_domain, website_endpoint).
+# ---------------------------------------------------------------------------
+run "object_output_omits_the_deprecated_attributes" {
+  command = apply
+
+  assert {
+    condition     = toset(keys(output.object)) == toset(["id", "arn", "bucket", "bucket_domain_name", "bucket_regional_domain_name", "bucket_region", "hosted_zone_id", "region", "object_lock_enabled", "force_destroy", "tags_all"])
+    error_message = "The object output must list the non-deprecated attributes of the bucket and none of the deprecated ones"
+  }
+
+  assert {
+    condition     = output.object.id == aws_s3_bucket.this.id && output.object.arn == aws_s3_bucket.this.arn && output.object.bucket == aws_s3_bucket.this.bucket
+    error_message = "The attributes of the object output must be those of the bucket"
+  }
+}

@@ -8,7 +8,7 @@ CAF-compliant Terraform module for creating an AWS S3 bucket. Supports the full 
 
 ```hcl
 module "s3_bucket" {
-  source   = "github.com/canada-ca-terraform-modules/terraform-aws-caf-s3_bucket.git?ref=v1.0.0"
+  source   = "github.com/canada-ca-terraform-modules/terraform-aws-caf-s3_bucket.git?ref=v2.0.0"
   for_each = var.s3buckets
 
   env               = var.env
@@ -82,7 +82,7 @@ No modules.
 | <a name="output_bucket"></a> [bucket](#output\_bucket) | Returns the name of the S3 bucket |
 | <a name="output_bucket_domain_name"></a> [bucket\_domain\_name](#output\_bucket\_domain\_name) | Returns the domain name of the S3 bucket |
 | <a name="output_id"></a> [id](#output\_id) | Returns the ID of the S3 bucket |
-| <a name="output_object"></a> [object](#output\_object) | Returns the full S3 bucket object |
+| <a name="output_object"></a> [object](#output\_object) | Returns the attributes of the S3 bucket that the provider has not deprecated |
 <!-- END_TF_DOCS -->
 
 ## TFVars Parameters
