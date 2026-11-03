@@ -9,7 +9,7 @@ variable "s3buckets" {
 }
 
 module "s3_bucket" {
-  source   = "github.com/canada-ca-terraform-modules/terraform-aws-caf-s3_bucket.git?ref=v1.0.0"
+  source   = "github.com/canada-ca-terraform-modules/terraform-aws-caf-s3_bucket.git?ref=v2.0.0"
   for_each = var.s3buckets
 
   userDefinedString = each.key
